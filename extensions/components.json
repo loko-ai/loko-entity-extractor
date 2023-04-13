@@ -1,0 +1,197 @@
+[
+ {
+  "name": "NER",
+  "description": "### Description\nThe NER component is used to train, predict and evaluate NER models.\n\nIt provides Spacy pretrained models and a base rule model which can be used to predict entities without training.\n\nOtherwise you can train new models starting from the HF or Spacy models in order to predict your custom entities. \n\nIts configuration and function in the flow are described below to give the user a general understanding of how this can \nbe used.\n\n### Configuration\n\n**Model Name** shows a list of available models. \n\nIn order to fit a new model you have to create it first. You can use the **NER GUI** or the **NER Management** \ncomponent.\n\n### Input\n\n**FIT** and **EVALUATE** input require data in the same format. They accept a list of dictionaries representing the \nsentences of your dataset. Each dictionary has two keys: \n*\"text\"* and *\"entities\"*. The key *\"entities\"* contains a list of entities present in the provided sentence. For each\nentity they need three elements: *start_index*, *end_index* and *tag*.\n\nExample:  \n\n```json\n[\n    {\"text\": \"Uber blew through $1 million a week\", \"entities\": [[0, 4, \"ORG\"]]},\n    {\"text\": \"Android Pay expands to Canada\", \"entities\": [[0, 11, \"PRODUCT\"], [23, 29, \"GPE\"]]},\n    {\"text\": \"Spotify steps up Asia expansion\", \"entities\": [[0, 7, \"ORG\"], [17, 21, \"LOC\"]]}\n        ]\n```\n\n**EXTRACT** input accepts one sentence at a time.\n\nLet's see an example:\n\n```json\n{\"text\": \"Spotify steps up Asia expansion\"}\n```\n\n### Output\n\n**FIT** output will only provide as response: Job submitted. All training checkpoints are shown on the top of you \ncomponent.\n\n**EXTRACT** output returns the list of predicted entities in the provided text.\n\nExample:  \n\n```json\n{\"entities\": [{\"tag\":\"LOC\",\"start_index\":17,\"end_index\":21,\"entity\":\"Asia\"}]}\n```\n\n**EVALUATE** output returns a classification report of the input data and informations about the model.\nYou can save the output using the extension \".eval\" and visualize you report using the **NER GUI**.\n \n",
+  "group": "AI",
+  "icon": "RiFileTextLine",
+  "click": null,
+  "events": {
+   "type": "ner",
+   "field": "model_name"
+  },
+  "configured": true,
+  "inputs": [
+   {
+    "id": "fit",
+    "label": "fit",
+    "service": "fit",
+    "to": "fit"
+   },
+   {
+    "id": "extract",
+    "label": "extract",
+    "service": "extract",
+    "to": "extract"
+   },
+   {
+    "id": "evaluate",
+    "label": "evaluate",
+    "service": "evaluate",
+    "to": "evaluate"
+   }
+  ],
+  "outputs": [
+   {
+    "id": "fit",
+    "label": "fit"
+   },
+   {
+    "id": "extract",
+    "label": "extract"
+   },
+   {
+    "id": "evaluate",
+    "label": "evaluate"
+   }
+  ],
+  "options": {
+   "values": {
+    "model_name": "it_core_news_lg",
+    "tokenizer": "it_core_news_lg"
+   },
+   "args": [
+    {
+     "name": "model_name",
+     "type": "asyncSelect",
+     "label": "Model Name",
+     "helper": "",
+     "group": "",
+     "value": "it_core_news_lg",
+     "description": "",
+     "validation": {
+      "required": "Required field"
+     },
+     "url": "http://localhost:9999/routes/ner/extractors"
+    },
+    {
+     "name": "tokenizer",
+     "type": "select",
+     "label": "Spacy tokenizer",
+     "helper": "",
+     "group": "Evaluate configuration",
+     "value": "it_core_news_lg",
+     "description": "",
+     "validation": null,
+     "options": [
+      "it_core_news_sm",
+      "en_core_web_sm",
+      "en_core_web_md",
+      "it_core_news_lg"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "NER Management",
+  "description": "",
+  "group": "AI",
+  "icon": "RiToolsFill",
+  "click": null,
+  "events": null,
+  "configured": true,
+  "inputs": [
+   {
+    "id": "create",
+    "label": "create",
+    "service": "create",
+    "to": "create"
+   },
+   {
+    "id": "info",
+    "label": "info",
+    "service": "info",
+    "to": "info"
+   },
+   {
+    "id": "delete",
+    "label": "delete",
+    "service": "delete",
+    "to": "delete"
+   },
+   {
+    "id": "import",
+    "label": "import",
+    "service": "import",
+    "to": "import"
+   },
+   {
+    "id": "export",
+    "label": "export",
+    "service": "export",
+    "to": "export"
+   }
+  ],
+  "outputs": [
+   {
+    "id": "create",
+    "label": "create"
+   },
+   {
+    "id": "info",
+    "label": "info"
+   },
+   {
+    "id": "delete",
+    "label": "delete"
+   },
+   {
+    "id": "import",
+    "label": "import"
+   },
+   {
+    "id": "export",
+    "label": "export"
+   }
+  ],
+  "options": {
+   "values": {},
+   "args": [
+    {
+     "name": "create_new",
+     "type": "boolean",
+     "label": "Create New",
+     "helper": "",
+     "group": "",
+     "value": false,
+     "description": "",
+     "validation": null
+    },
+    {
+     "name": "new_model_name",
+     "type": "dynamic",
+     "label": "Model Name",
+     "helper": "",
+     "group": "",
+     "value": null,
+     "description": "",
+     "validation": {
+      "required": "Required field"
+     },
+     "parent": "create_new",
+     "condition": "{parent}",
+     "dynamicType": "text",
+     "options": null,
+     "url": null
+    },
+    {
+     "name": "model_name",
+     "type": "dynamic",
+     "label": "Model Name",
+     "helper": "",
+     "group": "",
+     "value": null,
+     "description": "",
+     "validation": {
+      "required": "Required field"
+     },
+     "parent": "create_new",
+     "condition": "!{parent}",
+     "dynamicType": "asyncSelect",
+     "options": null,
+     "url": "http://localhost:9999/routes/ner/extractors"
+    }
+   ]
+  }
+ }
+]

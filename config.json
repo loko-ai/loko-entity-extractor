@@ -1,0 +1,10 @@
+{
+  "main": {
+    "volumes": [
+      "/var/opt/loko/ner:/plugin/resources"
+    ],
+    "gui": {
+      "name": "NER GUI"
+    }
+  }
+}

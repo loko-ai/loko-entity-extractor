@@ -1,0 +1,13 @@
+.*
+.idea
+venv
+!.gitignore
+!.dockerignore
+!.env
+!.env.production
+*.pyc
+dist
+__pycache__
+resources
+**/node_modules
+test

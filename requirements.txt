@@ -1,0 +1,15 @@
+boto3
+dateparser
+loko-client
+loko-extensions
+phonenumbers
+python-codicefiscale
+sanic == 22.6.2
+sanic-cors
+sanic-openapi
+schwifty
+sklearn
+spacy
+torch
+transformers
+vat_validator
