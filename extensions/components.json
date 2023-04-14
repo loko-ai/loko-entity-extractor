@@ -1,7 +1,7 @@
 [
  {
-  "name": "NER",
-  "description": "### Description\nThe NER component is used to train, predict and evaluate NER models.\n\nIt provides Spacy pretrained models and a base rule model which can be used to predict entities without training.\n\nOtherwise you can train new models starting from the HF or Spacy models in order to predict your custom entities. \n\nIts configuration and function in the flow are described below to give the user a general understanding of how this can \nbe used.\n\n### Configuration\n\n**Model Name** shows a list of available models. \n\nIn order to fit a new model you have to create it first. You can use the **NER GUI** or the **NER Management** \ncomponent.\n\n### Input\n\n**FIT** and **EVALUATE** input require data in the same format. They accept a list of dictionaries representing the \nsentences of your dataset. Each dictionary has two keys: \n*\"text\"* and *\"entities\"*. The key *\"entities\"* contains a list of entities present in the provided sentence. For each\nentity they need three elements: *start_index*, *end_index* and *tag*.\n\nExample:  \n\n```json\n[\n    {\"text\": \"Uber blew through $1 million a week\", \"entities\": [[0, 4, \"ORG\"]]},\n    {\"text\": \"Android Pay expands to Canada\", \"entities\": [[0, 11, \"PRODUCT\"], [23, 29, \"GPE\"]]},\n    {\"text\": \"Spotify steps up Asia expansion\", \"entities\": [[0, 7, \"ORG\"], [17, 21, \"LOC\"]]}\n        ]\n```\n\n**EXTRACT** input accepts one sentence at a time.\n\nLet's see an example:\n\n```json\n{\"text\": \"Spotify steps up Asia expansion\"}\n```\n\n### Output\n\n**FIT** output will only provide as response: Job submitted. All training checkpoints are shown on the top of you \ncomponent.\n\n**EXTRACT** output returns the list of predicted entities in the provided text.\n\nExample:  \n\n```json\n{\"entities\": [{\"tag\":\"LOC\",\"start_index\":17,\"end_index\":21,\"entity\":\"Asia\"}]}\n```\n\n**EVALUATE** output returns a classification report of the input data and informations about the model.\nYou can save the output using the extension \".eval\" and visualize you report using the **NER GUI**.\n \n",
+  "name": "Entities",
+  "description": "### Description\nThe NER component is used to train, predict and evaluate NER models.\n\nIt provides Spacy pretrained models and a base rule model which can be used to predict entities without training.\n\nOtherwise, you can train new models starting from the HF or Spacy models in order to predict your custom entities. \n\nIts configuration and function in the flow are described below to give the user a general understanding of how this can \nbe used.\n\n### Configuration\n\n**Model Name** shows a list of available models. \n\nIn order to fit a new model you have to create it first. You can use the **NER GUI** or the **NER Management** \ncomponent.\n\n### Input\n\n**FIT** and **EVALUATE** input require data in the same format. They accept a list of dictionaries representing the \nsentences of your dataset. Each dictionary has two keys: \n*\"text\"* and *\"entities\"*. The key *\"entities\"* contains a list of entities present in the provided sentence. For each\nentity they need three elements: *start_index*, *end_index* and *tag*.\n\nExample:  \n\n```json\n[\n    {\"text\": \"Uber blew through $1 million a week\", \"entities\": [[0, 4, \"ORG\"]]},\n    {\"text\": \"Android Pay expands to Canada\", \"entities\": [[0, 11, \"PRODUCT\"], [23, 29, \"GPE\"]]},\n    {\"text\": \"Spotify steps up Asia expansion\", \"entities\": [[0, 7, \"ORG\"], [17, 21, \"LOC\"]]}\n        ]\n```\n\n**EXTRACT** input accepts one sentence at a time.\n\nLet's see an example:\n\n```json\n{\"text\": \"Spotify steps up Asia expansion\"}\n```\n\n### Output\n\n**FIT** output will only provide as response: Job submitted. All training checkpoints are shown on the top of you \ncomponent.\n\n**EXTRACT** output returns the list of predicted entities in the provided text.\n\nExample:  \n\n```json\n{\"entities\": [{\"tag\":\"LOC\",\"start_index\":17,\"end_index\":21,\"entity\":\"Asia\"}]}\n```\n\n**EVALUATE** output returns a classification report of the input data and informations about the model.\nYou can save the output using the extension \".eval\" and visualize you report using the **NER GUI**.\n \n",
   "group": "AI",
   "icon": "RiFileTextLine",
   "click": null,
@@ -61,7 +61,7 @@
      "validation": {
       "required": "Required field"
      },
-     "url": "http://localhost:9999/routes/ner/extractors"
+     "url": "http://localhost:9999/routes/loko-entity-extractor/extractors"
     },
     {
      "name": "tokenizer",
@@ -83,7 +83,7 @@
   }
  },
  {
-  "name": "NER Management",
+  "name": "Entities Manager",
   "description": "",
   "group": "AI",
   "icon": "RiToolsFill",
@@ -172,6 +172,7 @@
      "condition": "{parent}",
      "dynamicType": "text",
      "options": null,
+     "fields": null,
      "url": null
     },
     {
@@ -189,7 +190,8 @@
      "condition": "!{parent}",
      "dynamicType": "asyncSelect",
      "options": null,
-     "url": "http://localhost:9999/routes/ner/extractors"
+     "fields": null,
+     "url": "http://localhost:9999/routes/loko-entity-extractor/extractors"
     }
    ]
   }

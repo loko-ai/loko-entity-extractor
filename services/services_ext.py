@@ -1,19 +1,18 @@
 import io
 import json
-import traceback
 from urllib.parse import unquote
 
+from loguru import logger
 from loko_client.business.fs_client import FSClient
-# from loko_extensions.business.decorators import extract_value_args
+from loko_extensions.business.decorators import extract_value_args
 
 import sanic
 from sanic import Sanic, Blueprint
 from sanic.exceptions import NotFound, SanicException
-from sanic_cors import CORS
-from sanic_openapi import swagger_blueprint
-from sanic_openapi.openapi2 import doc
+from sanic_ext import Config
+from sanic_ext.extensions.openapi import openapi
+from sanic_ext.extensions.openapi.types import Schema
 
-from utils.loko_extensions.business.decorators import extract_value_args
 from business.ws_client import WSClient
 from config.app_config import S3_ACCESS_KEY, S3_SECRET_ACCESS_KEY, S3_BUCKET, AWS_REGION, LANG_CODE_MAP
 from dao.fitting_dao import FitRegistry
@@ -23,13 +22,9 @@ from dao.ner_s3_dao import S3NERDao
 from model.client_request import TextRequest, ModelCreationRequest, TrainingRequest
 from model.extractors.ner_factories import NERFactory
 from model.extractors.evaluate import evaluate
-from utils.logger_utils import stream_logger
 from utils.ppom_reader import get_major_minor_version
-from utils.sanic_utils import Json
 from utils.services_utils import fithelper
 from utils.zip_utils import extract_zipfile, make_zipfile
-
-logger = stream_logger(__name__)
 
 SERVICES_PORT = 8080
 MODELS_DIR = "../resources"
@@ -47,30 +42,19 @@ else:
 fitting = FitRegistry()
 
 
-def get_app(name):
-    app = Sanic(name)
-    swagger_blueprint.url_prefix = "/api"
-    app.blueprint(swagger_blueprint)
-    return app
-
-
 name = "entity-extractor"
-app = get_app(name)
+app = Sanic(name)
+app.extend(config=Config(oas_url_prefix='/api', oas_ui_default='swagger'))
 bp = Blueprint("default", url_prefix="")
 app.config.API_DESCRIPTION = "Entity Extractor Swagger"
 app.config["API_VERSION"] = get_major_minor_version()
 app.config["API_TITLE"] = name
-app.config["REQUEST_MAX_SIZE"] = 20000000000
-app.config["REQUEST_TIMEOUT"] = 172800
 
-# # gets current directory
-# BASE = os.getcwd()
-# app.static('/src', BASE + '/src')
-# # serve js file for webpack
-# app.static('/', BASE)
-# app.static('/main.js', './dist/main.js', name='main.js')
-CORS(app)
 app.static('/web', "/frontend/dist")
+
+class File(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="file", **kwargs)
 
 @app.route('/web')
 async def index(request):
@@ -104,7 +88,7 @@ async def manage_exception(request, exception):
     if isinstance(exception, NotFound):
         return sanic.json(e, status=404)
 
-    logger.error('TracebackERROR: \n' + traceback.format_exc() + '\n\n', exc_info=True)
+    logger.exception(exception)
 
     if type(exception) == Exception:
         return sanic.json(dict(error=str(exception)), status=500)
@@ -113,8 +97,8 @@ async def manage_exception(request, exception):
 
 
 @bp.post('/test')
-@doc.tag('test')
-@doc.summary('TEST')
+@openapi.tag('test')
+@openapi.summary('TEST')
 @extract_value_args()
 async def test_service(value, args):
     logger.debug(f'VALUE: {value}')
@@ -126,15 +110,15 @@ async def test_service(value, args):
 ### FRONTEND SERVICES ###
 
 @bp.get('/extractors/')
-@doc.tag('frontend')
-@doc.summary('It shows all the created NER models (the instances that can be used for training and/or extraction)')
+@openapi.tag('frontend')
+@openapi.summary('It shows all the created NER models (the instances that can be used for training and/or extraction)')
 async def all_ners(request):
     return sanic.json(NER_DAO.get_all())
 
 @bp.get('/extractors/<name>')
-@doc.tag('frontend')
-@doc.summary('It gives information about the specified extractor')
-@doc.consumes(doc.String(name="name"), location="path", required=True)
+@openapi.tag('frontend')
+@openapi.summary('It gives information about the specified extractor')
+@openapi.parameter(name="name", location="path", required=True)
 async def info_ner(request, name):
     name = unquote(name)
     if name not in NER_DAO.get_all():
@@ -142,9 +126,9 @@ async def info_ner(request, name):
     return sanic.json(NER_DAO.load_blueprint(identifier=name))
 
 @bp.post('/extractors/<name>')
-@doc.tag('frontend')
-@doc.summary('It creates a NER configuration')
-@doc.description('''
+@openapi.tag('frontend')
+@openapi.summary('It creates a NER configuration')
+@openapi.description('''
     Examples
     --------
     body = {"typology": "trainable_spacy",
@@ -154,9 +138,8 @@ async def info_ner(request, name):
             "minibatch_size": 500,
             "dropout_rate": 0.2}
 ''')
-@doc.consumes(doc.JsonBody({}), location="body")
-@doc.consumes(doc.String(name="name"), location="path", required=True)
-async def create_ner(request, name):
+@openapi.body(content={"application/json": {}}, name='body', location="body", required=True)
+async def create_ner(request, name: str):
     name = unquote(name)
     if name in NER_DAO.get_all():
         raise SanicException(f'Extractor "{name}" already exists!', status_code=400)
@@ -169,10 +152,14 @@ async def create_ner(request, name):
     return sanic.json(f'Model "{extractor.identifier}" created!')
 
 @bp.post("/extractors/import")
-@doc.tag('frontend')
-@doc.summary('Upload an existing extractor')
-@doc.consumes(doc.File(name="file"), location="formData", content_type="multipart/form-data", required=True)
+@openapi.tag('frontend')
+@openapi.summary('Upload an existing extractor')
+@openapi.parameter(name="file", schema=File(), location="formData", content_type="multipart/form-data", required=True)
 async def upload(request):
+    print(request.args)
+    print(request.form)
+    print(request.body)
+    print(request.files)
     file = request.files.get('file')
     print('FILE::', file)
 
@@ -190,9 +177,9 @@ async def upload(request):
     return sanic.json('Done')
 
 @bp.get("/extractors/<name>/export")
-@doc.tag('frontend')
-@doc.summary('Download an existing extractor')
-@doc.consumes(doc.String(name="name"), location="path", required=True)
+@openapi.tag('frontend')
+@openapi.summary('Download an existing extractor')
+@openapi.parameter(name="name", location="path", required=True)
 async def download(request, name):
     name = unquote(name)
 
@@ -209,9 +196,9 @@ async def download(request, name):
     return sanic.response.raw(buffer.getvalue(), headers=headers)
 
 @bp.delete('/extractors/<name>')
-@doc.tag('frontend')
-@doc.summary('It deletes a NER model given an id')
-@doc.consumes(doc.String(name="name"), location="path", required=True)
+@openapi.tag('frontend')
+@openapi.summary('It deletes a NER model given an id')
+@openapi.parameter(name="name", location="path", required=True)
 async def delete_ner(request, name):
     name = unquote(name)
     if name not in NER_DAO.get_all():
@@ -221,10 +208,10 @@ async def delete_ner(request, name):
     return sanic.json(f'Removal of model "{name}": [OK]')
 
 @bp.get("/extractors/<name>/copy")
-@doc.tag('frontend')
-@doc.summary('Copy an existing extractor')
-@doc.consumes(doc.String(name="new_name"), location="query")
-@doc.consumes(doc.String(name="name"), location="path", required=True)
+@openapi.tag('frontend')
+@openapi.summary('Copy an existing extractor')
+@openapi.parameter(name="new_name", location="query")
+@openapi.parameter(name="name", location="path", required=True)
 async def copy(request, name):
     name = unquote(name)
 
@@ -232,6 +219,8 @@ async def copy(request, name):
         raise SanicException(f'Extractor "{name}" does not exist!', status_code=400)
 
     new_name = request.args.get('new_name', name + '_copy')
+
+    logger.debug(f'name: {name} - new name: {new_name}')
 
     NER_DAO.copy(name, new_name)
 
@@ -241,9 +230,9 @@ async def copy(request, name):
 ### LOKO SERVICES ###
 
 @bp.post('create')
-@doc.tag('CRUD loko services')
-@doc.summary('It creates a NER configuration')
-@doc.description('''
+@openapi.tag('CRUD loko services')
+@openapi.summary('It creates a NER configuration')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -260,9 +249,9 @@ async def copy(request, name):
               }
             }
 ''')
-@doc.consumes(doc.JsonBody({"value": dict, "args": {"new_model_name": str}}), location="body")
+@openapi.body({"value": dict, "args": {"new_model_name": str}})
 @extract_value_args()
-async def create_ner(value, args):
+async def create_ner2(value, args):
     name = args.get('new_model_name')
     if name in NER_DAO.get_all():
         raise SanicException(f'Extractor "{name}" already exists!', status_code=400)
@@ -275,9 +264,9 @@ async def create_ner(value, args):
     return sanic.json(f'Model "{extractor.identifier}" created!')
 
 @bp.post('info')
-@doc.tag('CRUD loko services')
-@doc.summary('It gives information about the specified extractor')
-@doc.description('''
+@openapi.tag('CRUD loko services')
+@openapi.summary('It gives information about the specified extractor')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -287,18 +276,18 @@ async def create_ner(value, args):
               }
             }
 ''')
-@doc.consumes(doc.JsonBody({"value": {}, "args": {"model_name": str}}), location="body")
+@openapi.body({"value": {}, "args": {"model_name": str}})
 @extract_value_args()
-async def info_ner(value, args):
+async def info_ner2(value, args):
     name = args.get('model_name') or args.get('new_model_name')
     if name not in NER_DAO.get_all():
         raise SanicException(f'Extractor "{name}" does not exist!', status_code=400)
     return sanic.json(NER_DAO.load_blueprint(identifier=name))
 
 @bp.post('delete')
-@doc.tag('CRUD loko services')
-@doc.summary('It deletes a NER model given an id')
-@doc.description('''
+@openapi.tag('CRUD loko services')
+@openapi.summary('It deletes a NER model given an id')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -308,9 +297,9 @@ async def info_ner(value, args):
               }
             }
 ''')
-@doc.consumes(doc.JsonBody({"value": {}, "args": {"model_name": str}}), location="body")
+@openapi.body({"value": {}, "args": {"model_name": str}})
 @extract_value_args()
-async def delete_ner(value, args):
+async def delete_ner2(value, args):
     name = args.get('model_name') or args.get('new_model_name')
     if name not in NER_DAO.get_all():
         raise SanicException(f'Extractor "{name}" does not exist!', status_code=400)
@@ -319,12 +308,11 @@ async def delete_ner(value, args):
     return sanic.json(f'Removal of model "{name}": [OK]')
 
 @bp.post("import")
-@doc.tag('CRUD loko services')
-@doc.summary('Upload an existing extractor')
-@doc.consumes(Json(name="args"), location="formData", content_type="multipart/form-data")
-@doc.consumes(doc.File(name="file"), location="formData", content_type="multipart/form-data")
+@openapi.tag('CRUD loko services')
+@openapi.summary('Upload an existing extractor')
+@openapi.parameter(name="file", schema=File(), location="formData", content_type="multipart/form-data", required=True)
 @extract_value_args(file=True)
-async def upload(file, args):
+async def upload2(file, args):
     logger.debug(f'FILE: {file}')
     logger.debug(f'ARGS: {args}')
     file = file[0]
@@ -342,9 +330,9 @@ async def upload(file, args):
     return sanic.json('Done')
 
 @bp.post("export")
-@doc.tag('CRUD loko services')
-@doc.summary('Download an existing extractor')
-@doc.description('''
+@openapi.tag('CRUD loko services')
+@openapi.summary('Download an existing extractor')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -354,9 +342,9 @@ async def upload(file, args):
               }
             }
 ''')
-@doc.consumes(doc.JsonBody({"value": {}, "args": {"model_name": str}}), location="body")
+@openapi.body({"value": {}, "args": {"model_name": str}})
 @extract_value_args()
-async def download(value, args):
+async def download2(value, args):
     name = args.get('model_name') or args.get('new_model_name')
 
     if name not in NER_DAO.get_all():
@@ -372,9 +360,9 @@ async def download(value, args):
 
 
 @bp.post('/fit')
-@doc.tag('EE loko services')
-@doc.summary('It trains a model to perform Named Entity Recognition')
-@doc.description('''
+@openapi.tag('EE loko services')
+@openapi.summary('It trains a model to perform Named Entity Recognition')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -388,7 +376,7 @@ async def download(value, args):
               }
             }
 ''')
-@doc.consumes(doc.JsonBody({"value": [], "args": {"model_name": str}}), location="body")
+@openapi.body({"value": [], "args": {"model_name": str}})
 @extract_value_args()
 async def train_ner(value, args):
     name = args.get('model_name')
@@ -411,9 +399,9 @@ async def train_ner(value, args):
 
 
 @bp.post('/extract')
-@doc.tag('EE loko services')
-@doc.summary('It performs Named Entity Recognition with the model associate to the given id')
-@doc.description('''
+@openapi.tag('EE loko services')
+@openapi.summary('It performs Named Entity Recognition with the model associate to the given id')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -429,7 +417,7 @@ async def train_ner(value, args):
           }
         }
 ''')
-@doc.consumes(doc.JsonBody({"value": {"text": str}, "args": {"model_name": str}}), location="body")
+@openapi.body({"value": {"text": str}, "args": {"model_name": str}})
 @extract_value_args()
 async def run_ner(value, args):
     name = args.get('model_name')
@@ -449,9 +437,9 @@ async def run_ner(value, args):
 
 
 @bp.post('/evaluate')
-@doc.tag('EE loko services')
-@doc.summary('It evaluates a model to perform Named Entity Recognition')
-@doc.description('''
+@openapi.tag('EE loko services')
+@openapi.summary('It evaluates a model to perform Named Entity Recognition')
+@openapi.description('''
     Examples
     --------
     body = {
@@ -465,7 +453,7 @@ async def run_ner(value, args):
               }
             }
 ''')
-@doc.consumes(doc.JsonBody({"value": [], "args": {"model_name": str}}), location="body")
+@openapi.body({"value": [], "args": {"model_name": str}})
 @extract_value_args()
 async def evaluate_ner(value, args):
     name = args.get('model_name')
@@ -490,5 +478,5 @@ async def evaluate_ner(value, args):
 
 
 app.blueprint(bp)
-
-app.run("0.0.0.0", port=8080, auto_reload=True)
+if __name__ == '__main__':
+    app.run("0.0.0.0", port=8080, auto_reload=True)

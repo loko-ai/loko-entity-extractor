@@ -1,13 +1,12 @@
 import asyncio
 import traceback
 
+from loguru import logger
+
 from dao.fitting_dao import FitRegistry
 from dao.ner_dao import NERDao
 from model.client_request import TrainingRequest
 from model.extractors.entity_extractors import TextEntityExtractor
-from utils.logger_utils import stream_logger
-
-logger = stream_logger(__name__)
 
 
 async def fithelper(name: str, extractor_model: TextEntityExtractor, train_data: TrainingRequest, fitting: FitRegistry,

@@ -54,7 +54,7 @@ function App() {
               <Image mr="0.5rem" w="50px" src={icon}/>
             </Link>
             <Heading size="md" py="2rem" color='#A9A9A9'>
-              Loko - NER
+              Loko - Entity Extractor
             </Heading>
             </HStack>
             </Box>

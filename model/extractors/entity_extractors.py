@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Dict
 
 import spacy
+from loguru import logger
 from spacy.training import Example
 from spacy.util import minibatch
 
@@ -16,10 +17,7 @@ from model.extractors.base_rules_extractors import TargaExtractor, CFExtractor, 
 from model.named_entity import NamedEntity
 from utils.conversion_utils import convert_to_spacy_trainable_format
 from utils.hf.callbacks import FittingCallback
-from utils.logger_utils import stream_logger
 from utils.training_utils import TrainerState, TrainerControl
-
-logger = stream_logger(__name__)
 
 class TextEntityExtractor(ABC):
     """

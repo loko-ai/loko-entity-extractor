@@ -6,14 +6,12 @@ from io import BytesIO
 from pathlib import Path
 from typing import List, Dict
 
+from loguru import logger
 from transformers import BertTokenizerFast, BertForTokenClassification
 
 from config.models_config import PRETRAINED_MODELS
 from dao.in_memory_dao import InMemoryDAO
 from model.extractors.hf_entity_extractors import TrainableHFTextExtractor
-from utils.logger_utils import stream_logger
-
-logger = stream_logger(__name__)
 
 
 class PretrainedNERDao:

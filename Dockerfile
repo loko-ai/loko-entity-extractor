@@ -6,7 +6,7 @@ RUN yarn install
 ADD ./frontend /frontend
 RUN yarn build --base="/routes/loko-entity-extractor/web/"
 
-FROM python:3.10-slim
+FROM lokoai/python_transformers
 EXPOSE 8080
 ADD ./requirements.lock /
 RUN pip install -r /requirements.lock

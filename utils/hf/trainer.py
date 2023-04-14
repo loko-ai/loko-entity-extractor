@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Union, NamedTuple, Tuple
 
 import numpy as np
 import torch
+from loguru import logger
 from torch.utils.data import DataLoader, Dataset
 from tqdm.auto import tqdm
 from transformers import Trainer, TrainingArguments
@@ -15,10 +16,6 @@ from transformers.tokenization_utils_base import BatchEncoding
 from transformers.trainer_utils import EvalPrediction, has_length, denumpify_detensorize, speed_metrics
 from transformers.deepspeed import deepspeed_init
 from transformers.trainer_pt_utils import DistributedTensorGatherer, SequentialDistributedSampler, nested_concat
-
-from utils.logger_utils import stream_logger
-
-logger = stream_logger(__name__)
 
 
 class PredictionOutput(NamedTuple):

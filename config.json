@@ -1,7 +1,12 @@
 {
   "main": {
+    "environment": {
+      "SANIC_REQUEST_MAX_SIZE": 20000000000,
+      "SANIC_REQUEST_TIMEOUT": 172800,
+      "SANIC_RESPONSE_TIMEOUT": 172800
+    },
     "volumes": [
-      "/var/opt/loko/ner:/plugin/resources"
+      "/var/opt/loko/ner/resources/:/plugin/resources/"
     ],
     "gui": {
       "name": "NER GUI"

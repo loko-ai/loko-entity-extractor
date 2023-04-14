@@ -8,14 +8,12 @@ from typing import Dict, List
 import boto3
 import torch
 from botocore.exceptions import ClientError
+from loguru import logger
 from transformers import BertForTokenClassification, BertConfig
 
 from dao.in_memory_dao import InMemoryDAO
 from dao.ner_dao import PretrainedNERDao
 from model.extractors.hf_entity_extractors import TrainableHFTextExtractor
-from utils.logger_utils import stream_logger
-
-logger = stream_logger(__name__)
 
 
 def flat(d):

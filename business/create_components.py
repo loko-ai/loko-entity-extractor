@@ -1,6 +1,7 @@
+from loko_extensions.model.components import Input, Output, Arg, Dynamic, Component, AsyncSelect, Select, \
+    save_extensions, Events
+
 from doc.doc import entities_doc
-from utils.loko_extensions.model.components import Arg, Component, save_extensions, Input, Output, Dynamic, AsyncSelect, \
-    Select
 
 create_input = Input(id='create', service='create', to='create')
 create_output = Output(id='create')
@@ -25,18 +26,18 @@ create_new = Arg(name='create_new', label='Create New', type='boolean', value=Fa
 new_model_name = Dynamic(name='new_model_name', label='Model Name', dynamicType='text',
                          parent='create_new', condition='{parent}', required=True)
 model_name = Dynamic(name='model_name', label='Model Name', dynamicType='asyncSelect',
-                     url='http://localhost:9999/routes/ner/extractors',
+                     url='http://localhost:9999/routes/loko-entity-extractor/extractors',
                      parent='create_new', condition='!{parent}', required=True)
 
 crud_args = [create_new, new_model_name, model_name]
-crud = Component(name='NER Management', description='', group='AI',
+crud = Component(name='Entities Manager', description='', group='AI',
                  icon='RiToolsFill',
                  args=crud_args,
                  inputs=crud_inputs, outputs=crud_outputs)
 
 
 model_name = AsyncSelect(name='model_name', label='Model Name',
-                         url='http://localhost:9999/routes/ner/extractors',
+                         url='http://localhost:9999/routes/loko-entity-extractor/extractors',
                          required=True,
                          value='it_core_news_lg')
 
@@ -57,9 +58,9 @@ extract_output = Output(id='extract', label='extract')
 evaluate_input = Input(id='evaluate', label='evaluate', service='evaluate', to='evaluate')
 evaluate_output = Output(id='evaluate', label='evaluate')
 
-entities = Component(name='NER', description=entities_doc, group='AI', args=entities_args,
+entities = Component(name='Entities', description=entities_doc, group='AI', args=entities_args,
                      inputs=[fit_input, extract_input, evaluate_input], outputs=[fit_output, extract_output, evaluate_output],
-                     icon='RiFileTextLine', events=dict(type="ner", field="model_name"))
+                     icon='RiFileTextLine', events=Events(type="ner", field="model_name"))
 
 
 

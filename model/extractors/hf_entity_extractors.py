@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 
+from loguru import logger
 from transformers import BertTokenizerFast, BertForTokenClassification
 
 from config.app_config import MODELS_DIR
@@ -12,9 +13,6 @@ from model.named_entity import NamedEntity
 from utils.hf.callbacks import compute_metrics, FittingCallback
 from utils.hf.dataset import HFdataset
 from utils.hf.trainer import CustomTrainingArguments, CustomTrainer, custom_data_collator
-from utils.logger_utils import stream_logger
-
-logger = stream_logger(__name__)
 
 
 class BaseHFTextExtractor(TextEntityExtractor, ABC):

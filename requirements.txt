@@ -4,12 +4,12 @@ loko-client
 loko-extensions
 phonenumbers
 python-codicefiscale
-sanic == 22.6.2
-sanic-cors
-sanic-openapi
+sanic
+sanic-ext
 schwifty
-sklearn
+scikit-learn
 spacy
 torch
 transformers
 vat_validator
+loguru
