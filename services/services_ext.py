@@ -11,7 +11,6 @@ from sanic import Sanic, Blueprint
 from sanic.exceptions import NotFound, SanicException
 from sanic_ext import Config
 from sanic_ext.extensions.openapi import openapi
-from sanic_ext.extensions.openapi.types import Schema
 
 from business.ws_client import WSClient
 from config.app_config import S3_ACCESS_KEY, S3_SECRET_ACCESS_KEY, S3_BUCKET, AWS_REGION, LANG_CODE_MAP
@@ -44,7 +43,8 @@ fitting = FitRegistry()
 
 name = "entity-extractor"
 app = Sanic(name)
-app.extend(config=Config(oas_url_prefix='/api', oas_ui_default='swagger'))
+app.extend(config=Config(oas_url_prefix='/api', oas_ui_default='swagger',
+                         swagger_ui_configuration=dict(DocExpansion=None)))
 bp = Blueprint("default", url_prefix="")
 app.config.API_DESCRIPTION = "Entity Extractor Swagger"
 app.config["API_VERSION"] = get_major_minor_version()
@@ -52,9 +52,10 @@ app.config["API_TITLE"] = name
 
 app.static('/web', "/frontend/dist")
 
-class File(Schema):
-    def __init__(self, **kwargs):
-        super().__init__(type="file", **kwargs)
+def file(f):
+    content = {"multipart/form-data": {"schema": {"type": "object", "properties": {"file": {"type": "string", "format": "binary"}}}}}
+    return openapi.body(content, required=True)(f)
+
 
 @app.route('/web')
 async def index(request):
@@ -96,17 +97,6 @@ async def manage_exception(request, exception):
     return sanic.json(e, status=500)
 
 
-@bp.post('/test')
-@openapi.tag('test')
-@openapi.summary('TEST')
-@extract_value_args()
-async def test_service(value, args):
-    logger.debug(f'VALUE: {value}')
-    logger.debug(f'ARGS: {args}')
-    mkv = args.get('multikeyvalue')
-    logger.debug(f'{mkv}')
-    return sanic.json('test service')
-
 ### FRONTEND SERVICES ###
 
 @bp.get('/extractors/')
@@ -138,7 +128,7 @@ async def info_ner(request, name):
             "minibatch_size": 500,
             "dropout_rate": 0.2}
 ''')
-@openapi.body(content={"application/json": {}}, name='body', location="body", required=True)
+@openapi.body(content={"application/json": object}, required=True)
 async def create_ner(request, name: str):
     name = unquote(name)
     if name in NER_DAO.get_all():
@@ -154,14 +144,9 @@ async def create_ner(request, name: str):
 @bp.post("/extractors/import")
 @openapi.tag('frontend')
 @openapi.summary('Upload an existing extractor')
-@openapi.parameter(name="file", schema=File(), location="formData", content_type="multipart/form-data", required=True)
+@file
 async def upload(request):
-    print(request.args)
-    print(request.form)
-    print(request.body)
-    print(request.files)
     file = request.files.get('file')
-    print('FILE::', file)
 
     name = file.name.strip('.zip')
 
@@ -249,7 +234,7 @@ async def copy(request, name):
               }
             }
 ''')
-@openapi.body({"value": dict, "args": {"new_model_name": str}})
+@openapi.body({"application/json": {"value": object, "args": {"new_model_name": str}}}, required=True)
 @extract_value_args()
 async def create_ner2(value, args):
     name = args.get('new_model_name')
@@ -276,7 +261,7 @@ async def create_ner2(value, args):
               }
             }
 ''')
-@openapi.body({"value": {}, "args": {"model_name": str}})
+@openapi.body({"application/json": {"value": object, "args": {"model_name": str}}}, required=True)
 @extract_value_args()
 async def info_ner2(value, args):
     name = args.get('model_name') or args.get('new_model_name')
@@ -297,7 +282,7 @@ async def info_ner2(value, args):
               }
             }
 ''')
-@openapi.body({"value": {}, "args": {"model_name": str}})
+@openapi.body({"application/json": {"value": object, "args": {"model_name": str}}}, required=True)
 @extract_value_args()
 async def delete_ner2(value, args):
     name = args.get('model_name') or args.get('new_model_name')
@@ -310,7 +295,7 @@ async def delete_ner2(value, args):
 @bp.post("import")
 @openapi.tag('CRUD loko services')
 @openapi.summary('Upload an existing extractor')
-@openapi.parameter(name="file", schema=File(), location="formData", content_type="multipart/form-data", required=True)
+@file
 @extract_value_args(file=True)
 async def upload2(file, args):
     logger.debug(f'FILE: {file}')
@@ -342,7 +327,7 @@ async def upload2(file, args):
               }
             }
 ''')
-@openapi.body({"value": {}, "args": {"model_name": str}})
+@openapi.body({"application/json": {"value": object, "args": {"model_name": str}}}, required=True)
 @extract_value_args()
 async def download2(value, args):
     name = args.get('model_name') or args.get('new_model_name')
@@ -376,7 +361,7 @@ async def download2(value, args):
               }
             }
 ''')
-@openapi.body({"value": [], "args": {"model_name": str}})
+@openapi.body({"application/json": {"value": object, "args": {"model_name": str}}}, required=True)
 @extract_value_args()
 async def train_ner(value, args):
     name = args.get('model_name')
@@ -417,7 +402,7 @@ async def train_ner(value, args):
           }
         }
 ''')
-@openapi.body({"value": {"text": str}, "args": {"model_name": str}})
+@openapi.body({"application/json": {"value": {"text": str}, "args": {"model_name": str}}}, required=True)
 @extract_value_args()
 async def run_ner(value, args):
     name = args.get('model_name')
@@ -453,7 +438,7 @@ async def run_ner(value, args):
               }
             }
 ''')
-@openapi.body({"value": [], "args": {"model_name": str}})
+@openapi.body({"application/json": {"value": object, "args": {"model_name": str}}}, required=True)
 @extract_value_args()
 async def evaluate_ner(value, args):
     name = args.get('model_name')
